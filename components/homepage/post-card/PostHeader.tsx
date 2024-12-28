@@ -1,11 +1,38 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	DropdownMenuSub,
+	DropdownMenuSubTrigger,
+	DropdownMenuSubContent,
+} from '@/components/ui/dropdown-menu';
 import { BsThreeDotsVertical } from 'react-icons/bs';
-import { FaEdit, FaTrash, FaFlag, FaShare, FaExpand, FaUser, FaGraduationCap, FaBuilding, FaChalkboardTeacher, FaIdCard } from 'react-icons/fa';
+import {
+	FaEdit,
+	FaTrash,
+	FaFlag,
+	FaShare,
+	FaExpand,
+	FaUser,
+	FaGraduationCap,
+	FaBuilding,
+	FaChalkboardTeacher,
+	FaIdCard,
+	FaWhatsapp,
+	FaTwitter,
+	FaFacebook,
+	FaTelegram,
+	FaLink,
+} from 'react-icons/fa';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { PostWithUser } from '@/types/types';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 
 interface PostHeaderProps {
 	post: PostWithUser;
@@ -13,7 +40,60 @@ interface PostHeaderProps {
 }
 
 export function PostHeader({ post, currentUserId }: PostHeaderProps) {
+	const { toast } = useToast();
 	const isAuthor = currentUserId === post.userId;
+
+	const handleShare = async (platform?: string) => {
+		const postUrl = `${window.location.origin}/post/${post.id}`;
+		const shareText = `Check out this post: ${post.title}`;
+
+		if (!platform && navigator.share) {
+			try {
+				await navigator.share({
+					title: post.title,
+					text: shareText,
+					url: postUrl,
+				});
+				return;
+			} catch (error) {
+				if ((error as Error).name !== 'AbortError') {
+					console.error('Error sharing:', error);
+				}
+			}
+		}
+
+		const shareUrls: Record<string, string> = {
+			whatsapp: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${postUrl}`)}`,
+			twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(postUrl)}`,
+			facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(postUrl)}`,
+			telegram: `https://t.me/share/url?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(shareText)}`,
+			copy: postUrl,
+		};
+
+		if (platform === 'copy') {
+			try {
+				await navigator.clipboard.writeText(postUrl);
+				toast({
+					title: 'Link copied!',
+					description: 'Post link has been copied to clipboard',
+					duration: 3000,
+				});
+			} catch (error) {
+				toast({
+					title: 'Failed to copy link',
+					description: 'Please try again',
+					variant: 'destructive',
+					duration: 3000,
+				});
+			}
+			return;
+		}
+
+		const shareUrl = shareUrls[platform || ''];
+		if (shareUrl) {
+			window.open(shareUrl, '_blank', 'noopener,noreferrer');
+		}
+	};
 
 	const formatTimeAgo = (date: Date) => {
 		const formatted = formatDistanceToNow(date, { addSuffix: true })
@@ -76,10 +156,38 @@ export function PostHeader({ post, currentUserId }: PostHeaderProps) {
 								<FaFlag className="h-4 w-4 mr-2 text-white group-hover:text-yellow-500 transition-colors" />
 								<span className="text-white group-hover:text-yellow-500 transition-colors">Report</span>
 							</DropdownMenuItem>
-							<DropdownMenuItem className="group text-white cursor-pointer">
-								<FaShare className="h-4 w-4 mr-2 text-white group-hover:text-green-400 transition-colors" />
-								<span className="text-white group-hover:text-green-400 transition-colors">Share</span>
-							</DropdownMenuItem>
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger className="group text-white cursor-pointer">
+									<FaShare className="h-4 w-4 mr-2 text-white group-hover:text-green-400 transition-colors" />
+									<span className="text-white group-hover:text-green-400 transition-colors">Share</span>
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent>
+									<DropdownMenuItem onClick={() => handleShare()}>
+										<FaShare className="h-4 w-4 mr-2" />
+										Share...
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => handleShare('whatsapp')}>
+										<FaWhatsapp className="h-4 w-4 mr-2 text-green-500" />
+										WhatsApp
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => handleShare('twitter')}>
+										<FaTwitter className="h-4 w-4 mr-2 text-blue-400" />
+										Twitter
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => handleShare('facebook')}>
+										<FaFacebook className="h-4 w-4 mr-2 text-blue-600" />
+										Facebook
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => handleShare('telegram')}>
+										<FaTelegram className="h-4 w-4 mr-2 text-blue-500" />
+										Telegram
+									</DropdownMenuItem>
+									<DropdownMenuItem onClick={() => handleShare('copy')}>
+										<FaLink className="h-4 w-4 mr-2" />
+										Copy Link
+									</DropdownMenuItem>
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
