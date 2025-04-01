@@ -2,6 +2,10 @@ import { PrismaClient } from '@prisma/client';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { PrismaNeon } from '@prisma/adapter-neon';
 
+declare global {
+	var prisma: PrismaClient | undefined;
+}
+
 // Only import ws in Node.js environment
 let ws;
 if (process.env.NODE_ENV !== 'production') {
