@@ -1,16 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { PrismaNeon } from '@prisma/adapter-neon';
+import WebSocket from 'ws';
 
 declare global {
+	// eslint-disable-next-line no-var
 	var prisma: PrismaClient | undefined;
 }
 
 // Only import ws in Node.js environment
-let ws;
 if (process.env.NODE_ENV !== 'production') {
-	ws = require('ws');
-	neonConfig.webSocketConstructor = ws;
+	neonConfig.webSocketConstructor = WebSocket;
 }
 
 // Check if we're in an Edge runtime
