@@ -1,39 +1,24 @@
 import { PrismaClient } from '@prisma/client';
-import { Pool, neonConfig } from '@neondatabase/serverless';
 import { PrismaNeon } from '@prisma/adapter-neon';
-import WebSocket from 'ws';
+import { Pool, neonConfig } from '@neondatabase/serverless';
 
+import ws from 'ws';
+neonConfig.webSocketConstructor = ws;
+
+// To work in edge environments (Cloudflare Workers, Vercel Edge, etc.), enable querying over fetch
+// neonConfig.poolQueryViaFetch = true
+
+// Type definitions
 declare global {
-	// eslint-disable-next-line no-var
 	var prisma: PrismaClient | undefined;
 }
 
-// Only import ws in Node.js environment
-if (process.env.NODE_ENV !== 'production') {
-	neonConfig.webSocketConstructor = WebSocket;
-}
+const connectionString = `${process.env.DATABASE_URL}`;
 
-// Check if we're in an Edge runtime
-const isEdge = process.env.NEXT_RUNTIME === 'edge';
+const pool = new Pool({ connectionString });
+const adapter = new PrismaNeon(pool);
+const prisma = global.prisma || new PrismaClient({ adapter });
 
-let prisma: PrismaClient;
-
-if (isEdge) {
-	// Edge runtime configuration
-	const connectionString = process.env.DATABASE_URL!;
-	const pool = new Pool({ connectionString });
-	const adapter = new PrismaNeon(pool);
-	prisma = new PrismaClient({ adapter });
-} else {
-	// Node.js runtime configuration
-	if (process.env.NODE_ENV === 'production') {
-		prisma = new PrismaClient();
-	} else {
-		if (!global.prisma) {
-			global.prisma = new PrismaClient();
-		}
-		prisma = global.prisma;
-	}
-}
+if (process.env.NODE_ENV === 'development') global.prisma = prisma;
 
 export const db = prisma;
